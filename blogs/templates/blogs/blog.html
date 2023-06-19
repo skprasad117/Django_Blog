@@ -1,0 +1,87 @@
+{% extends 'blogs/base.html '%}
+{% load static %}
+{% block css %} 
+<link rel="stylesheet" href="{% static 'blogs/dashboard.css' %}">
+{% endblock %}
+{% block navbartitle %} Dashboard {% endblock %}
+{% block navbarbutton %}
+
+<h2>{{likes}}  Total Likes</h2>
+<h3>hello, {{request.user.username}}</h3>
+<form class="d-flex"  action="{% url 'blogs:register_likes'%}" method="post">
+    {% csrf_token %}
+            <input type="hidden" name="post_id" value={{content.pk}}>
+             <button class="btn btn-outline-success" type="submit">{% if like_status %}
+                Dislike
+            {% else %}
+                Like
+            {% endif %}</button>
+        </form> 
+<form class="d-flex"  action="{% url 'blogs:create_blog'%}">
+    {% csrf_token %}
+             <button class="btn btn-outline-success" type="submit">What's in your Mind?</button>
+        </form> 
+<form class="d-flex"  action="{% url 'blogs:logout_request'%}" method="post" role="search">
+    {% csrf_token %}
+            <button class="btn btn-outline-success" type="submit">Logout</button>
+        </form> 
+
+{% endblock %}
+
+
+{% block body %}
+
+<div class="centered-div">
+    <div class="centered-inner-div">
+        <div class="container">
+            <div>
+                <div class = "image-frame-div"><img src="/media/{{content.image}}" width="100%" height="100%" ></div>
+                <a href = "{{content.pk}}"><h2>{{content.title}}</h2></a>
+                <div class = "container-item-footer"></div>
+                <p><strong>Likes</strong>: Not set yet </p>
+                <p><strong>Author Name</strong>: {{content.author_name}} </p>
+                <p><strong>Published Date</strong>: {{content.pub_date}} </p>
+                <p><strong>Last Updated on</strong>: {{content.last_edit_date}} </p>
+                <p>{{content.content}}</p>
+                <div><form class="d-flex"  action="{% url 'blogs:register_comment'%}" method="post">
+                    {% csrf_token %}
+                            <input type="text" name="comment" placeholder="write comment">
+                            <input type="hidden" name="post_id" value={{content.pk}}>
+                             <button class="btn btn-outline-success" type="submit">Comment</button>
+                        </form>
+                        <h3>comments</h3>
+                        {% for i,j in comments.items %}
+                            {% for k,l in j.items %}
+                                    {% if k == "comment"%}
+                                        <p><strong>Comment : </strong>{{l.username}} at : {{l.first_response_date}}</p>
+                                        <ul>{{l.comment}}</ul>
+                                        <form   action="{% url 'blogs:register_comment_reply'%}" method="post">
+                                            {% csrf_token %}
+                                                    <input type="text" name="comment" placeholder="Reply comment">
+                                                    <input type="hidden" name="post_id" value={{content.pk}}>
+                                                    <input type="hidden" name="comment_id" value={{l.pk}}>
+                                                    <button type="submit">Reply</button>
+                                                </form> 
+                                    {% elif k == "replies" %}
+                                            <ul>
+                                                {% for index in l %}
+                                                <li><strong>Replies : </strong>{{ index.username }}  at : {{ index.first_response_date }}</li>
+                                                    <ul><p>{{index.comment}}</p></ul>
+                                            {% endfor %}
+                                            </ul>
+
+                                    {% endif %}                          
+                            {% endfor %}
+                            {% endfor %}
+                    
+                </div>
+                    
+                
+                
+                
+            </div>
+          </div>
+          
+      </div>
+  </div>
+{% endblock %}

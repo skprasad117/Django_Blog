@@ -1,0 +1,10 @@
+{% extends 'blogs/base.html '%}
+{% block body %}
+<form action="{% url 'blogs:create_blog'%}" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <input type="text"  name="title" placeholder="Blog Name">
+    <input type="text"  name="content" placeholder="type blog content here">
+    <input type="file" name="image">
+    <button type="submit" value="Submit">Publish</button> 
+  </form>
+{% endblock %}

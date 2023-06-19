@@ -1,0 +1,24 @@
+{% extends 'blogs/base.html '%}
+{% load static %}
+{% block title %} User Registration {% endblock %}
+{% block css %} 
+<link rel="stylesheet" href="{% static 'blogs/signup.css' %}">
+{% endblock %}
+{% block navbartitle %} Signup Page {% endblock %}
+{% block body %}
+
+<!--Register--> 
+<div class="container py-5">
+	<h1>Register</h1>
+	<h3>{{ message }}</h3>
+	<form method="POST">
+		{% csrf_token %}
+		{{ register_form.as_table }}                    
+     
+		<button class="btn btn-primary" type="submit">Register</button>
+	</form>
+	<p class="text-center">If you already have an account, <a href="{% url 'blogs:login_request'%}">login</a> instead.</p>
+</div>
+{% endblock %}       
+
+
