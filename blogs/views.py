@@ -7,7 +7,10 @@ from django.contrib.auth.forms import AuthenticationForm
 import sys
 import os
 from . logger import logging
-from . models import Posts, Response, CommentsResponse, BlogGallery
+from . models import Posts, Response, CommentsResponse, BlogGallery, Subscription
+
+from django.utils import timezone
+from datetime import datetime
 
 
 def user_registeration(request):
@@ -51,8 +54,13 @@ def login_request(request):
         user = auth.authenticate(username= username, password=password)
         if user is not None:
             login(request,user)
-            content = load_dashboard_content(request)
-            return render(request,"blogs/dashboard.html",{"contents":content})
+            
+            if ensure_user_in_sub_model(request):
+                logging.info("checking user in subs model ")
+                content = load_dashboard_content(request)
+                return render(request,"blogs/dashboard.html",{"contents":content})
+            else:
+                return HttpResponse("problem occured in registering user in sub model")
     form = AuthenticationForm()
     
     return render(request, "blogs/login.html",{"login_form": form})
@@ -95,6 +103,11 @@ def create_blog(request):
 def read_blog(request, post_id):
     if request.user.is_authenticated:
         post = Posts.objects.get(pk=post_id)
+        if not blog_read_access(request,post_id):
+            sub_instance = Subscription.objects.get(user=request.user)
+            one=sub_instance.accessed_blog_one
+            return HttpResponse(f'you have reached your daily limit of access. come again or  read articles open for you \
+                                <a href ="http://127.0.0.1:8000/blogs/{sub_instance.accessed_blog_one}">one</a> <a href ="http://127.0.0.1:8000/blogs/{sub_instance.accessed_blog_two}">two</a>. or purchase the subscription for unlimited access ')
         content = post
         likes_total = load_likes(request,post_id)
         likes_total = likes_total.count()
@@ -103,6 +116,8 @@ def read_blog(request, post_id):
         print("Total likes",likes_total)
         print(content.pk)
         gallery = fetch_gallery(request, post_id)
+        logging.info("updating daily read count")
+        upate_daily_read_count(request,post_id)
         return render(request, "blogs/blog.html",{"content":content,"likes":likes_total, "comments": comments, "like_status": like_button_status,"gallery":gallery})
     
 def get_like_status(request, post_id):
@@ -334,5 +349,60 @@ def post_editor(request):
         post_id = request.GET.get('post_id', None)    
         post_instance = Posts.objects.get(pk=post_id)
         return render(request,"blogs/editor.html", {"form": post_instance})
+    
+
+def ensure_user_in_sub_model(request)->bool:
+    if request.user.is_authenticated:
+        sub_instance = Subscription.objects.filter(user = request.user)
+        if sub_instance.count():
+            current_datetime = timezone.now().date()
+            sub_instance = Subscription.objects.get(user= request.user)
+            if sub_instance.last_logged_in<current_datetime:
+                sub_instance.daily_read_count = 0
+                sub_instance.accessed_blog_one = None
+                sub_instance.accessed_blog_two = None
+            return True
+        else:
+            sub_instance = Subscription(user = request.user)
+            sub_instance.save()
+            return True
+    return False
+
+def upate_daily_read_count(request, post_id):
+
+    try:
+        sub_instance = Subscription.objects.get(user = request.user)
+        if sub_instance.accessed_blog_one is None:
+            sub_instance.accessed_blog_one = post_id
+        elif sub_instance.accessed_blog_one != post_id and sub_instance.accessed_blog_two is None:
+            sub_instance.accessed_blog_two = post_id 
+
+        logging.info(f"{sub_instance.daily_read_count}")
+        sub_instance.daily_read_count += 1
+        logging.info(f"{sub_instance.daily_read_count}")
+        sub_instance.save()
+    except Exception as e:
+        logging.info(e)
+    else:
+        logging.info(f"returning")
+        return None
+    
+def blog_read_access(request,post_id)->bool:
+    sub_instance = Subscription.objects.get(user=request.user)
+    if sub_instance.subscription_status == False:
+        if sub_instance.daily_read_count<=2:
+            return True
+        else:
+            if sub_instance.accessed_blog_one == post_id or sub_instance.accessed_blog_two == post_id:
+                return True
+            else:
+                False
+    elif sub_instance.subscription_status == True:
+        return True
+    
+    else:
+        return False
+
+
     
 

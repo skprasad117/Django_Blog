@@ -48,3 +48,16 @@ class BlogGallery(models.Model):
     posts = models.ForeignKey(Posts, on_delete=models.CASCADE, default="")
     images = models.ImageField(upload_to="blogs/gallery")
     upload_date = models.DateField(auto_now_add=True)
+
+class Subscription(models.Model):
+    id = models.AutoField
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    daily_read_count = models.IntegerField(default=0,blank=True)
+    accessed_blog_one = models.IntegerField(blank=True, null=True)
+    accessed_blog_two = models.IntegerField(blank=True, null= True)
+    last_logged_in = models.DateTimeField(auto_now_add=True)
+    subscription_status = models.BooleanField(default=False)
+    Subscription_purchase_date = models.BooleanField(blank=True,null=True)
+
+    def __str__(self):
+        return str(self.user) + "- " +str(self.last_logged_in)
