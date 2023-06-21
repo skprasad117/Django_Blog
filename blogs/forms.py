@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
+from .models import Posts
 from . logger import logging
 class CustomUserForm(UserCreationForm):
     email = forms.EmailField(required=True)
@@ -17,3 +18,12 @@ class CustomUserForm(UserCreationForm):
             user.save()
             logging.info("user created successfully")
         return user
+    
+
+
+
+
+class PostEditorForm(forms.ModelForm):
+    class Meta:
+        model = Posts
+        fields = '__all__'

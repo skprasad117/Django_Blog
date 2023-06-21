@@ -1,5 +1,5 @@
-from django.shortcuts import render
-from . forms import CustomUserForm
+from django.shortcuts import render, HttpResponse
+from . forms import CustomUserForm, PostEditorForm
 from django.shortcuts import render, redirect
 from django.contrib.auth import login
 from django.contrib import messages, auth
@@ -7,7 +7,7 @@ from django.contrib.auth.forms import AuthenticationForm
 import sys
 import os
 from . logger import logging
-from . models import Posts, Response
+from . models import Posts, Response, CommentsResponse, BlogGallery
 
 
 def user_registeration(request):
@@ -81,7 +81,7 @@ def create_blog(request):
 
         if request.user.is_authenticated:
             print("all okay")
-            author = request.user.username
+            author = request.user
             title = request.POST['title']
             content = request.POST['content']
             image = request.FILES['image']
@@ -102,7 +102,8 @@ def read_blog(request, post_id):
         like_button_status = get_like_status(request, post_id)
         print("Total likes",likes_total)
         print(content.pk)
-        return render(request, "blogs/blog.html",{"content":content,"likes":likes_total, "comments": comments, "like_status": like_button_status})
+        gallery = fetch_gallery(request, post_id)
+        return render(request, "blogs/blog.html",{"content":content,"likes":likes_total, "comments": comments, "like_status": like_button_status,"gallery":gallery})
     
 def get_like_status(request, post_id):
     instatance = Response.objects.filter(post_id = post_id, username = request.user.username,nested = False)
@@ -161,14 +162,25 @@ def load_comment(request, post_id):
     print("comment : ",comments)
     comment_return = dict()
     for count,comment in enumerate(comments):
+        temp_0 = list()
         comment_return[count] = dict()
-        comment_return[count]["comment"] = comment
+        temp_0.append(comment)
+        temp_0.append(load_comment_reaction(request,comment.pk))
+        comment_return[count]["comment"] = temp_0
         replies = load_replies(request, post_id, comment.pk)
         comment_return[count]["replies"] = list()
         for reply in replies:
-            comment_return[count]["replies"].append(reply)
+            temp = list()
+            temp.append(reply)
+            temp.append(load_comment_reaction(request,reply.pk))
+            comment_return[count]["replies"].append(temp)
     print(comment_return)
     return comment_return
+
+def load_comment_reaction(request,comment_id):
+    likes_instance = CommentsResponse.objects.filter(response = comment_id, reaction = "Like")
+    Dislikes_instance = CommentsResponse.objects.filter(response = comment_id, reaction = "Dislike")
+    return {"comment_id": comment_id,"Likes": likes_instance.count(), "Dislikes": Dislikes_instance.count()}
 
 def load_replies(request, post_id, comment_id):
     replies = Response.objects.filter(post_id = post_id,nested_response_id=comment_id, nested= True).order_by("-first_response_date")
@@ -246,4 +258,81 @@ def register_comment_reply(request):
             
 
 
+
+def register_comment_reaction(request):
+    
+
+    if request.user.is_authenticated:
+        user  =  request.user
+        response_id = request.POST.get("comment_id")  # response_pk
+        post_id = request.POST.get("post_id")
+        reaction = request.POST["choice"]
+        print("post id",post_id, type(response_id), user, reaction)
+        
+        response_exist = CommentsResponse.objects.filter(response = response_id, user_name = user)
+        print(post_id, user, response_id, reaction)
+
+        if response_exist.count():
+            response_instance = CommentsResponse.objects.get(response = response_id, user_name = user)
+            response_instance.reaction = reaction
+            response_instance.save()
+                
+        else:
+            response_instance = CommentsResponse(user_name = user , response = Response.objects.get(pk=response_id), reaction = reaction)
+            response_instance.save()
+            logging.info("comment reaction registerd successfully")
+        return read_blog(request, post_id)
+
+    return read_blog(request, post_id)
+
+def load_reaction_status(request,comment_id, user):
+    pass
+
+
+def upload_to_gallery(request):
+    if request.method == "POST":
+        if request.user.is_authenticated:
+            post_id = int(request.POST.get("post_id"))
+            images = request.FILES.getlist('images')
+            for image in images:
+                print(post_id, type(post_id), image)
+                BlogGallery.objects.create(posts = Posts.objects.get(pk = post_id), images = image)
+    return read_blog(request, post_id)
+
+def fetch_gallery(request, post_id):
+    gallery_instance = BlogGallery.objects.filter(posts=post_id).order_by("-upload_date")
+    return gallery_instance
+def open_editor(request):
+    if request.method =="POST":
+        post_id = request.POST['post_id']
+
+
+
+def post_editor(request):
+    if request.method == "POST":
+        post_id = request.POST['post_id']
+        if request.user.is_authenticated:
+            post_instance = Posts.objects.get(pk=post_id)
+            if str(request.user.username) == str(post_instance.author_name):
+                title = request.POST['title']
+                content = request.POST['content']
+                print(title,content)
+                image = request.FILES.get('image')
+                print(image, type(image))
+                post_instance.title = title
+                post_instance.content = content
+                if image:
+                    post_instance.image = image
+                post_instance.save()
+                return read_blog(request, post_id)
+            else:
+                print(type(post_instance.author_name))
+                return HttpResponse(f'You dont have required privleges to edit this blog, only author have the right to make changes.\
+                                    <a href ="{post_id}">click  here</a> to go back ')
+        return HttpResponse("Authentication is required to access post editor")
+    elif request.method == "GET":
+        post_id = request.GET.get('post_id', None)    
+        post_instance = Posts.objects.get(pk=post_id)
+        return render(request,"blogs/editor.html", {"form": post_instance})
+    
 

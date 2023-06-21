@@ -1,0 +1,24 @@
+<html>
+    <head>
+        <title>Editor</title>
+    </head>
+    <style> 
+	input {
+    width: auto;
+    min-width: 50px;  /* Set the minimum width */
+    max-width: 500px; /* Set the maximum width if desired */
+}
+
+</style>
+    <body>
+        <h1>Editor</h1>
+        <form action="{% url 'blogs:post_editor'%}" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+    <input type="hidden"  name="post_id" value = "{{form.pk}}">
+    <input type="text"  name="title" placeholder="Blog Name" value = "{{form.title}}">
+    <input type="text"  name="content" placeholder="type blog content here" value = "{{form.content}}" size="50">
+    <input type="file" name="image">
+    <button type="submit" value="Submit">Publish Changes</button> 
+        </form>
+    </body>
+</html>

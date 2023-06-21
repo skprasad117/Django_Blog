@@ -5,7 +5,11 @@
 {% endblock %}
 {% block navbartitle %} Dashboard {% endblock %}
 {% block navbarbutton %}
-
+<form action="{% url 'blogs:post_editor' %}" method="get">
+  {% csrf_token %}
+  <input type="hidden" name="post_id" value="{{content.pk}}">
+  <button type="submit">Edit Blog</button>
+</form>
 <h2>{{likes}}  Total Likes</h2>
 <h3>hello, {{request.user.username}}</h3>
 <form class="d-flex"  action="{% url 'blogs:register_likes'%}" method="post">
@@ -39,9 +43,21 @@
                 <a href = "{{content.pk}}"><h2>{{content.title}}</h2></a>
                 <div class = "container-item-footer"></div>
                 <p><strong>Likes</strong>: Not set yet </p>
-                <p><strong>Author Name</strong>: {{content.author_name}} </p>
+                <p><strong>Author Name</strong>: {{content.author_name}} {{content.pk}}</p>
                 <p><strong>Published Date</strong>: {{content.pub_date}} </p>
                 <p><strong>Last Updated on</strong>: {{content.last_edit_date}} </p>
+                <div> 
+                  {% for image in gallery %}
+                  <img src="/media/{{image.images}}" width="200" height="100" >
+                  {% endfor %}
+
+                </div>
+                <form action = "{% url 'blogs:upload_to_gallery' %}" method="POST" class="post-form" enctype="multipart/form-data">  
+                  {% csrf_token %}  
+                  <input type="file" name="images" multiple>
+                  <input type="hidden" name="post_id" value={{content.pk}}>
+                  <button type="submit">Upload Image</button>  
+                </form> </div>
                 <p>{{content.content}}</p>
                 <div><form class="d-flex"  action="{% url 'blogs:register_comment'%}" method="post">
                     {% csrf_token %}
@@ -50,28 +66,66 @@
                              <button class="btn btn-outline-success" type="submit">Comment</button>
                         </form>
                         <h3>comments</h3>
+              
                         {% for i,j in comments.items %}
+                        
                             {% for k,l in j.items %}
+                            
                                     {% if k == "comment"%}
-                                        <p><strong>Comment : </strong>{{l.username}} at : {{l.first_response_date}}</p>
-                                        <ul>{{l.comment}}</ul>
+                                        <p><strong>Comment : </strong>{{l.0.username}} at : {{l.0.first_response_date}}</p>
+                                        <ul>{{l.0.comment}}</ul> 
+                                        <form action="{% url 'blogs:register_comment_reaction'%}" method="post" >
+                                            {% csrf_token %}
+                                            
+                                            <label>
+                                              <input type="submit" name="choice" value="Like">
+                    
+                                            </label>
+                                            
+                                            <label>
+                                              <input type="submit" name="choice" value="Dislike">
+                                            </label>
+                                            <input type="hidden" name="post_id" value={{content.pk}}>
+                                            <input type="hidden" name="comment_id" value={{l.0.pk}}>
+                                          </form><p><strong>Likes:</strong>{{l.1.Likes}} <strong>Dislikes:</strong>{{l.1.Dislikes}}</p>
+                                          
                                         <form   action="{% url 'blogs:register_comment_reply'%}" method="post">
                                             {% csrf_token %}
                                                     <input type="text" name="comment" placeholder="Reply comment">
                                                     <input type="hidden" name="post_id" value={{content.pk}}>
-                                                    <input type="hidden" name="comment_id" value={{l.pk}}>
+                                                    <input type="hidden" name="comment_id" value={{l.0.pk}}>
                                                     <button type="submit">Reply</button>
-                                                </form> 
+                                        </form> 
+                                        
+
                                     {% elif k == "replies" %}
+                                    
                                             <ul>
                                                 {% for index in l %}
-                                                <li><strong>Replies : </strong>{{ index.username }}  at : {{ index.first_response_date }}</li>
-                                                    <ul><p>{{index.comment}}</p></ul>
+                    
+                                                <li><strong>Replies : </strong>{{ index.0.username }}  at : {{ index.0.first_response_date }}</li>
+                                                    <ul><p>{{index.0.comment}}</p>
+                                                    <form action="{% url 'blogs:register_comment_reaction'%}" method="post" >
+                                                        {% csrf_token %}
+                                                        
+                                                        <label>
+                                                          <input type="submit" name="choice" value="Like">
+                                                        </label>
+                                                        
+                                                        <label>
+                                                          <input type="submit" name="choice" value="Dislike">
+                                                        </label>
+                                                        <input type="hidden" name="post_id" value={{content.pk}}>
+                                                        <input type="hidden" name="comment_id" value={{index.0.pk}}>
+                                                      </form> <p><strong>Likes:</strong>{{index.1.Likes}} <strong>Dislikes:</strong>{{index.1.Dislikes}}</p></ul>
+                                        
                                             {% endfor %}
                                             </ul>
+                                            
 
                                     {% endif %}                          
                             {% endfor %}
+                            <p>----------------------------------------------------------------------------------------------</p>
                             {% endfor %}
                     
                 </div>
