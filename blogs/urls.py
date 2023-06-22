@@ -16,4 +16,9 @@ urlpatterns = [
     path("upload_to_gallery", views.upload_to_gallery, name="upload_to_gallery"),
     path("post_editor", views.post_editor, name="post_editor"),
     path("open_post_editor/<int:post_id>/", views.post_editor, name="post_editor"),
+    path("subscribe", views.subscribe, name="subscribe"),
+  
+
+    
+    
 ]

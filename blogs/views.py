@@ -8,9 +8,13 @@ import sys
 import os
 from . logger import logging
 from . models import Posts, Response, CommentsResponse, BlogGallery, Subscription
+from django.conf import settings
 
 from django.utils import timezone
 from datetime import datetime
+
+
+
 
 
 def user_registeration(request):
@@ -45,7 +49,8 @@ def user_registeration(request):
 def login_request(request):
     if request.user.is_authenticated:
         content = load_dashboard_content(request)
-        return render(request,"blogs/dashboard.html",{"contents":content})
+        sub_status = Subscription.objects.get(user = request.user)
+        return render(request,"blogs/dashboard.html",{"contents":content,"sub_status": sub_status})
     
     if request.method == "POST":
         username = request.POST.get("username")
@@ -57,8 +62,8 @@ def login_request(request):
             
             if ensure_user_in_sub_model(request):
                 logging.info("checking user in subs model ")
-                content = load_dashboard_content(request)
-                return render(request,"blogs/dashboard.html",{"contents":content})
+                sub_status = Subscription.objects.get(user = request.user)
+                return render(request,"blogs/dashboard.html",{"contents":content,"sub_status": sub_status})
             else:
                 return HttpResponse("problem occured in registering user in sub model")
     form = AuthenticationForm()
@@ -402,7 +407,18 @@ def blog_read_access(request,post_id)->bool:
     
     else:
         return False
-
-
     
+
+def subscribe(request):
+    if request.user.is_authenticated:
+        sub_instance = Subscription.objects.get(user = request.user)
+        if sub_instance.subscription_status:
+            sub_instance.subscription_status = False
+            sub_instance.save()
+        else:
+            sub_instance.subscription_status = True
+            sub_instance.save()
+
+    return login_request(request)
+            
 

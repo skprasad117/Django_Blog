@@ -12,6 +12,12 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 import os
 from pathlib import Path
 
+
+PAYPAL_CLIENT_ID = 'AdPrxGoZDwIySJUY6Mz3Fwb6INlsCJvQUW22gH0esqc5Bp_kEOIc5I-_YOUnFPden3mRprSbuSONVuKJ'
+PAYPAL_SECRET_KEY = 'EBfhs5LDM24em7iwLEnjzL5BfmZJcUQcpbR4Nu_NRgh4vxfW49WAh9_nbzu_VOBMrYtjm2yIWcZlak5O'
+PAYPAL_RECEIVER_EMAIL = 'your-paypal-email@example.com'
+PAYPAL_TEST = True  # Set to False for production
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -31,6 +37,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    "paypal.standard.ipn",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -38,6 +45,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "blogs",
+    
 ]
 
 MIDDLEWARE = [

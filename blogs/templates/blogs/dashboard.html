@@ -7,6 +7,11 @@
 {% block navbarbutton %}
 
 <h3>hello, {{request.user.username}}</h3>
+<form class="d-flex"  action="{% url 'blogs:subscribe'%}" method="post">
+    {% csrf_token %}
+            
+             <button class="btn btn-outline-success" type="submit">{% if sub_status.subscription_status %}unsubscribe {% else %} subscribe{% endif %}</button>
+        </form> 
 <form class="d-flex"  action="{% url 'blogs:create_blog'%}">
     {% csrf_token %}
              <button class="btn btn-outline-success" type="submit">What's in your Mind?</button>
