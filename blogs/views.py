@@ -7,7 +7,7 @@ from django.contrib.auth.forms import AuthenticationForm
 import sys
 import os
 from . logger import logging
-from . models import Posts, Response, CommentsResponse, BlogGallery, Subscription
+from . models import Posts, Response, CommentsResponse, BlogGallery, Subscription, BlogStats
 from django.conf import settings
 
 from django.utils import timezone
@@ -27,6 +27,7 @@ def user_registeration(request):
             logging.info("All details are valid. creating user...")
             
             try:
+            
                 user = form.save()
                 messages.success(request, "User Registered Successfully")
                 message = "User Registerd Successfully"
@@ -63,6 +64,7 @@ def login_request(request):
             if ensure_user_in_sub_model(request):
                 logging.info("checking user in subs model ")
                 sub_status = Subscription.objects.get(user = request.user)
+                content = load_dashboard_content(request)
                 return render(request,"blogs/dashboard.html",{"contents":content,"sub_status": sub_status})
             else:
                 return HttpResponse("problem occured in registering user in sub model")
@@ -81,6 +83,7 @@ def logout_request(request):
                 logging.info(e)
             finally:
                 return render(request, "blogs/login.html", {"message":message})
+    return login_request(request)
             
 def load_dashboard_content(request):
     if request.user.is_authenticated:
@@ -108,8 +111,11 @@ def create_blog(request):
 def read_blog(request, post_id):
     if request.user.is_authenticated:
         post = Posts.objects.get(pk=post_id)
+        logging.info(f"Request blog post to read {post_id}")
         if not blog_read_access(request,post_id):
+            logging.info(f"subs status {blog_read_access(request,post_id)} for post id : {post_id}")
             sub_instance = Subscription.objects.get(user=request.user)
+            
             one=sub_instance.accessed_blog_one
             return HttpResponse(f'you have reached your daily limit of access. come again or  read articles open for you \
                                 <a href ="http://127.0.0.1:8000/blogs/{sub_instance.accessed_blog_one}">one</a> <a href ="http://127.0.0.1:8000/blogs/{sub_instance.accessed_blog_two}">two</a>. or purchase the subscription for unlimited access ')
@@ -123,7 +129,10 @@ def read_blog(request, post_id):
         gallery = fetch_gallery(request, post_id)
         logging.info("updating daily read count")
         upate_daily_read_count(request,post_id)
-        return render(request, "blogs/blog.html",{"content":content,"likes":likes_total, "comments": comments, "like_status": like_button_status,"gallery":gallery})
+        blog_view_update_count(request,post_id)
+        blog_stats = get_blog_stats(request,post_id)
+        logging.info(blog_stats)
+        return render(request, "blogs/blog.html",{"content":content,"likes":likes_total, "comments": comments, "like_status": like_button_status,"gallery":gallery, "blog_stats": blog_stats})
     
 def get_like_status(request, post_id):
     instatance = Response.objects.filter(post_id = post_id, username = request.user.username,nested = False)
@@ -178,7 +187,7 @@ def load_likes(request, post_id):
     print("likes : ",likes)
     return likes
 def load_comment(request, post_id):
-    comments = Response.objects.filter(post_id = post_id, nested= False).order_by("-first_response_date")
+    comments = Response.objects.filter(post_id = post_id, nested= False, comment_flag=True).order_by("-first_response_date")
     print("comment : ",comments)
     comment_return = dict()
     for count,comment in enumerate(comments):
@@ -361,8 +370,10 @@ def ensure_user_in_sub_model(request)->bool:
         sub_instance = Subscription.objects.filter(user = request.user)
         if sub_instance.count():
             current_datetime = timezone.now().date()
+            
             sub_instance = Subscription.objects.get(user= request.user)
-            if sub_instance.last_logged_in<current_datetime:
+            print(current_datetime,sub_instance.last_logged_in.date())
+            if sub_instance.last_logged_in.date()<current_datetime:
                 sub_instance.daily_read_count = 0
                 sub_instance.accessed_blog_one = None
                 sub_instance.accessed_blog_two = None
@@ -377,36 +388,63 @@ def upate_daily_read_count(request, post_id):
 
     try:
         sub_instance = Subscription.objects.get(user = request.user)
-        if sub_instance.accessed_blog_one is None:
+        if sub_instance.accessed_blog_one is None and sub_instance.accessed_blog_two is None:
+            logging.info(f"giving access to the first blog of the day")
             sub_instance.accessed_blog_one = post_id
-        elif sub_instance.accessed_blog_one != post_id and sub_instance.accessed_blog_two is None:
+            logging.info(f"giving access to the first blog of the day{sub_instance.accessed_blog_one}")
+        elif sub_instance.accessed_blog_one != None and sub_instance.accessed_blog_two is None:
+            logging.info(f"giving access to the second blog of the day")
             sub_instance.accessed_blog_two = post_id 
+            logging.info(f"giving access to the second blog of the day{sub_instance.accessed_blog_two}")
 
-        logging.info(f"{sub_instance.daily_read_count}")
+        logging.info(f"last read count {sub_instance.daily_read_count}")
         sub_instance.daily_read_count += 1
-        logging.info(f"{sub_instance.daily_read_count}")
+        logging.info(f"updated total read count{sub_instance.daily_read_count}")
         sub_instance.save()
+        logging.info("saved the status")
     except Exception as e:
-        logging.info(e)
+        logging.info("its an exception",e)
     else:
         logging.info(f"returning")
         return None
     
-def blog_read_access(request,post_id)->bool:
-    sub_instance = Subscription.objects.get(user=request.user)
-    if sub_instance.subscription_status == False:
-        if sub_instance.daily_read_count<=2:
-            return True
-        else:
-            if sub_instance.accessed_blog_one == post_id or sub_instance.accessed_blog_two == post_id:
+def blog_read_access(request,post_id:int)->bool:
+    if request.user.is_authenticated:
+        if type(post_id) == str:
+            post_id = int(post_id)
+        sub_instance = Subscription.objects.get(user=request.user)
+        logging.info("------------------blog read access----------------------")
+        logging.info(f"{request.user} {sub_instance==True}")
+        logging.info(f"post checking for access {post_id} and opened posts for today are \
+                                {sub_instance.accessed_blog_one}{sub_instance.accessed_blog_two}")
+        logging.info("-----------getting subs status------------")
+        logging.info(f"getting subs status for {sub_instance}, {sub_instance.subscription_status}")
+        if sub_instance.subscription_status == False:
+            logging.info("sub status found : false")
+            if sub_instance.daily_read_count<=2:
+                logging.info(f"daily read count of user found to be {sub_instance.daily_read_count}")
                 return True
             else:
-                False
-    elif sub_instance.subscription_status == True:
-        return True
-    
-    else:
-        return False
+
+                logging.info(f"daily read count of user found to be greater than 2 : {sub_instance.daily_read_count}")
+                # logging.info(f"checking {post_id} and opened posts for today are: {sub_instance.accessed_blog_one} and  {sub_instance.accessed_blog_two}")
+                # logging.info(f"{type(sub_instance.accessed_blog_one)} {type(sub_instance.accessed_blog_two)} {type(post_id)}")
+                # logging.info(f"{sub_instance.accessed_blog_one==post_id} {sub_instance.accessed_blog_two==post_id}")
+
+                if sub_instance.accessed_blog_one == post_id or sub_instance.accessed_blog_two == post_id:
+                    logging.info(f"post found to be open for access {post_id} and opened posts for today are{sub_instance.accessed_blog_one}and {sub_instance.accessed_blog_two}.")
+                    return True
+                else:
+                    logging.info("failed to find blog access")
+                    return False
+        elif sub_instance.subscription_status == True:
+            logging.info("sub status found : true")
+            return True
+        
+        else:
+            return False
+    logging.info("authentication not found")
+    return None
     
 
 def subscribe(request):
@@ -422,3 +460,40 @@ def subscribe(request):
     return login_request(request)
             
 
+def blog_view_update_count(request,post_id):
+    blog_view_instance = BlogStats.objects.filter(user = request.user, post = Posts.objects.get(pk = post_id))
+
+    if blog_view_instance.count():
+        return None
+    else:
+        blog_view_create_instance = BlogStats(user = request.user, post = Posts.objects.get(pk = post_id))
+        blog_view_create_instance.save()
+        return None 
+    
+def register_blog_image_reaction(request):
+    if request.method == "POST":
+        if request.user.is_authenticated:
+            post_id = request.POST['post_id']
+            response = request.POST['choice']
+            blog_stats_instance = BlogStats.objects.get(user=request.user, post = Posts.objects.get(pk=post_id))
+            blog_stats_instance.image_response = response
+            blog_stats_instance.save()
+            logging.info("saved reaction")
+            return read_blog(request,post_id)
+    return HttpResponse('Something went wrong <a href ="{post_id}">click  here</a> to go back ')
+
+def get_blog_stats(request, post_id):
+    blog_views_instance = BlogStats.objects.filter(post_id=post_id)
+    comment_instance = Response.objects.filter(post_id=post_id, comment_flag = True, nested= False)
+    likes = BlogStats.objects.filter(post_id=post_id,image_response="Like")
+    dislikes = BlogStats.objects.filter(post_id=post_id,image_response="Dislike")
+    current_user_reaction =  BlogStats.objects.get(post_id=post_id,user= request.user)
+
+    data ={
+        "total_visits": blog_views_instance.count(),
+        "total_comments": comment_instance.count(),
+        "likes": likes.count(),
+        "dislikes": dislikes.count(),
+        "current_user_reaction" : current_user_reaction.image_response
+    }
+    return data

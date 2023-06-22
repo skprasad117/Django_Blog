@@ -1,141 +1,195 @@
 {% extends 'blogs/base.html '%}
 {% load static %}
+<!-------------------------------- css start------------------------------------------------------>
 {% block css %} 
 <link rel="stylesheet" href="{% static 'blogs/dashboard.css' %}">
+<link rel="stylesheet" href="{% static 'blogs/blogs.css' %}">
 {% endblock %}
+
+<!-------------------------------- css end-------------------------------------------------------->
+
+<!-------------------------------- nav barstart------------------------------------------------------>
 {% block navbartitle %} Dashboard {% endblock %}
+
+
 {% block navbarbutton %}
-<form action="{% url 'blogs:post_editor' %}" method="get">
+<!-- ----------------edit blog start -------------------------------------->
+  <form action="{% url 'blogs:post_editor' %}" method="get">
   {% csrf_token %}
-  <input type="hidden" name="post_id" value="{{content.pk}}">
-  <button type="submit">Edit Blog</button>
-</form>
-<h2>{{likes}}  Total Likes</h2>
-<h3>hello, {{request.user.username}}</h3>
-<form class="d-flex"  action="{% url 'blogs:register_likes'%}" method="post">
-    {% csrf_token %}
-            <input type="hidden" name="post_id" value={{content.pk}}>
-             <button class="btn btn-outline-success" type="submit">{% if like_status %}
-                Dislike
-            {% else %}
-                Like
-            {% endif %}</button>
-        </form> 
-<form class="d-flex"  action="{% url 'blogs:create_blog'%}">
-    {% csrf_token %}
-             <button class="btn btn-outline-success" type="submit">What's in your Mind?</button>
-        </form> 
-<form class="d-flex"  action="{% url 'blogs:logout_request'%}" method="post" role="search">
-    {% csrf_token %}
-            <button class="btn btn-outline-success" type="submit">Logout</button>
-        </form> 
+    <input type="hidden" name="post_id" value="{{content.pk}}">
+    <button type="submit">Edit Blog</button>
+  </form>
+<!-- ------------------------edit blog end------------------------- -->
+
+  <h2>{{likes}}  Total Likes</h2>  total likes count
+  <h3>hello, {{request.user.username}}</h3>
+
+  <form class="d-flex"  action="{% url 'blogs:register_likes'%}" method="post">
+      {% csrf_token %}
+              <input type="hidden" name="post_id" value={{content.pk}}>
+              <button class="btn btn-outline-success" type="submit">{% if like_status %}
+                  Dislike
+              {% else %}
+                  Like
+              {% endif %}</button>
+  </form> 
+
+    <form class="d-flex"  action="{% url 'blogs:create_blog'%}">
+        {% csrf_token %}
+                <button class="btn btn-outline-success" type="submit">What's in your Mind?</button>
+    </form> 
+
+    <form class="d-flex"  action="{% url 'blogs:logout_request'%}" method="post" role="search">
+        {% csrf_token %}
+                <button class="btn btn-outline-success" type="submit">Logout</button>
+    </form> 
 
 {% endblock %}
+<!-------------------------------- nav bar end-------------------------------------------------------->
+
 
 
 {% block body %}
 
 <div class="centered-div">
-    <div class="centered-inner-div">
-        <div class="container">
-            <div>
-                <div class = "image-frame-div"><img src="/media/{{content.image}}" width="100%" height="100%" ></div>
-                <a href = "{{content.pk}}"><h2>{{content.title}}</h2></a>
-                <div class = "container-item-footer"></div>
-                <p><strong>Likes</strong>: Not set yet </p>
-                <p><strong>Author Name</strong>: {{content.author_name}} {{content.pk}}</p>
-                <p><strong>Published Date</strong>: {{content.pub_date}} </p>
-                <p><strong>Last Updated on</strong>: {{content.last_edit_date}} </p>
-                <div> 
-                  {% for image in gallery %}
-                  <img src="/media/{{image.images}}" width="200" height="100" >
-                  {% endfor %}
+  <div class="centered-inner-div">
+    <div class="container">
+      <div>
+          <div class = "image-frame-div"><img src="/media/{{content.image}}" width="100%" height="100%"></div>
+          
+            <form action="{% url 'blogs:register_blog_image_reaction'%}" method="post" >
+              {% csrf_token %}
+              {% if blog_stats.current_user_reaction == "Like" %}
+              <label>
+                <input type="submit" name="choice" value="Dislike">
+              </label>
+              {% elif blog_stats.current_user_reaction == "Dislike" %}
+              <label>
+                <input type="submit" name="choice" value="Like">
 
-                </div>
-                <form action = "{% url 'blogs:upload_to_gallery' %}" method="POST" class="post-form" enctype="multipart/form-data">  
-                  {% csrf_token %}  
-                  <input type="file" name="images" multiple>
-                  <input type="hidden" name="post_id" value={{content.pk}}>
-                  <button type="submit">Upload Image</button>  
-                </form> </div>
-                <p>{{content.content}}</p>
-                <div><form class="d-flex"  action="{% url 'blogs:register_comment'%}" method="post">
-                    {% csrf_token %}
-                            <input type="text" name="comment" placeholder="write comment">
-                            <input type="hidden" name="post_id" value={{content.pk}}>
-                             <button class="btn btn-outline-success" type="submit">Comment</button>
-                        </form>
-                        <h3>comments</h3>
+              </label>
+              {% else %}
+              <label>
+                <input type="submit" name="choice" value="Like">
+
+              </label>
               
-                        {% for i,j in comments.items %}
-                        
-                            {% for k,l in j.items %}
-                            
-                                    {% if k == "comment"%}
-                                        <p><strong>Comment : </strong>{{l.0.username}} at : {{l.0.first_response_date}}</p>
-                                        <ul>{{l.0.comment}}</ul> 
-                                        <form action="{% url 'blogs:register_comment_reaction'%}" method="post" >
-                                            {% csrf_token %}
-                                            
-                                            <label>
-                                              <input type="submit" name="choice" value="Like">
-                    
-                                            </label>
-                                            
-                                            <label>
-                                              <input type="submit" name="choice" value="Dislike">
-                                            </label>
-                                            <input type="hidden" name="post_id" value={{content.pk}}>
-                                            <input type="hidden" name="comment_id" value={{l.0.pk}}>
-                                          </form><p><strong>Likes:</strong>{{l.1.Likes}} <strong>Dislikes:</strong>{{l.1.Dislikes}}</p>
-                                          
-                                        <form   action="{% url 'blogs:register_comment_reply'%}" method="post">
-                                            {% csrf_token %}
-                                                    <input type="text" name="comment" placeholder="Reply comment">
-                                                    <input type="hidden" name="post_id" value={{content.pk}}>
-                                                    <input type="hidden" name="comment_id" value={{l.0.pk}}>
-                                                    <button type="submit">Reply</button>
-                                        </form> 
-                                        
+              <label>
+                <input type="submit" name="choice" value="Dislike">
+              </label>
+              {% endif %}
+              
+              <input type="hidden" name="post_id" value={{content.pk}}>
+            </form>
+            <p><strong>Likes:</strong>{{blog_stats.likes}} <strong>Dislikes:</strong>{{blog_stats.dislikes}}</p>
 
-                                    {% elif k == "replies" %}
-                                    
-                                            <ul>
-                                                {% for index in l %}
-                    
-                                                <li><strong>Replies : </strong>{{ index.0.username }}  at : {{ index.0.first_response_date }}</li>
-                                                    <ul><p>{{index.0.comment}}</p>
-                                                    <form action="{% url 'blogs:register_comment_reaction'%}" method="post" >
-                                                        {% csrf_token %}
-                                                        
-                                                        <label>
-                                                          <input type="submit" name="choice" value="Like">
-                                                        </label>
-                                                        
-                                                        <label>
-                                                          <input type="submit" name="choice" value="Dislike">
-                                                        </label>
-                                                        <input type="hidden" name="post_id" value={{content.pk}}>
-                                                        <input type="hidden" name="comment_id" value={{index.0.pk}}>
-                                                      </form> <p><strong>Likes:</strong>{{index.1.Likes}} <strong>Dislikes:</strong>{{index.1.Dislikes}}</p></ul>
-                                        
-                                            {% endfor %}
-                                            </ul>
-                                            
 
-                                    {% endif %}                          
-                            {% endfor %}
-                            <p>----------------------------------------------------------------------------------------------</p>
-                            {% endfor %}
-                    
-                </div>
-                    
-                
-                
-                
+            <a href = "{{content.pk}}"><h2>{{content.title}}</h2></a>
+            <div class = "container-item-footer"></div>
+            <p><strong>Likes</strong>: Not set yet </p>
+            <p><strong>Author Name</strong>: {{content.author_name}} {{content.pk}}</p>
+            <p><strong>Published Date</strong>: {{content.pub_date}} </p>
+            <p><strong>Last Updated on</strong>: {{content.last_edit_date}} </p>
+            <div> 
+              {% for image in gallery %}
+              <img src="/media/{{image.images}}" width="200" height="100" >
+              {% endfor %}
+
             </div>
+            <form action = "{% url 'blogs:upload_to_gallery' %}" method="POST" class="post-form" enctype="multipart/form-data">  
+              {% csrf_token %}  
+              <input type="file" name="images" multiple>
+              <input type="hidden" name="post_id" value={{content.pk}}>
+              <button type="submit">Upload Image</button>  
+            </form> 
           </div>
+          <div>
+            
+            <p><strong>Total Visits:</strong>{{ blog_stats.total_visits }}</p>
+            <p><strong>Total Comments:</strong>{{blog_stats.total_comments}}</p>
+
+          </div>
+          <p>{{content.content}}</p>
+          <div><form class="d-flex"  action="{% url 'blogs:register_comment'%}" method="post">
+              {% csrf_token %}
+                      <input type="text" name="comment" placeholder="write comment">
+                      <input type="hidden" name="post_id" value={{content.pk}}>
+                       <button class="btn btn-outline-success" type="submit">Comment</button>
+                  </form>
+                  <h3>comments</h3>
+        
+                  {% for i,j in comments.items %}
+                  <div class = "comment-container">
+
+                    {% for k,l in j.items %}
+                      
+                              {% if k == "comment"%}
+                                  <p><strong>Comment : </strong>{{l.0.username}} at : {{l.0.first_response_date}}</p>
+                                  <ul>{{l.0.comment}}</ul> 
+                                  <form action="{% url 'blogs:register_comment_reaction'%}" method="post" >
+                                      {% csrf_token %}
+                                      
+                                      <label>
+                                        <input type="submit" name="choice" value="Like">
+              
+                                      </label>
+                                      
+                                      <label>
+                                        <input type="submit" name="choice" value="Dislike">
+                                      </label>
+                                      <input type="hidden" name="post_id" value={{content.pk}}>
+                                      <input type="hidden" name="comment_id" value={{l.0.pk}}>
+                                    </form><p><strong>Likes:</strong>{{l.1.Likes}} <strong>Dislikes:</strong>{{l.1.Dislikes}}</p>
+                                    
+                                  <form   action="{% url 'blogs:register_comment_reply'%}" method="post">
+                                      {% csrf_token %}
+                                              <input type="text" name="comment" placeholder="Reply comment">
+                                              <input type="hidden" name="post_id" value={{content.pk}}>
+                                              <input type="hidden" name="comment_id" value={{l.0.pk}}>
+                                              <button type="submit">Reply</button>
+                                  </form> 
+                                  
+
+                              {% elif k == "replies" %}
+                              
+                                      <ul>
+                                          {% for index in l %}
+              
+                                          <li><strong>Replies : </strong>{{ index.0.username }}  at : {{ index.0.first_response_date }}</li>
+                                              <ul><p>{{index.0.comment}}</p>
+                                              <form action="{% url 'blogs:register_comment_reaction'%}" method="post" >
+                                                  {% csrf_token %}
+                                                  
+                                                  <label>
+                                                    <input type="submit" name="choice" value="Like">
+                                                  </label>
+                                                  
+                                                  <label>
+                                                    <input type="submit" name="choice" value="Dislike">
+                                                  </label>
+                                                  <input type="hidden" name="post_id" value={{content.pk}}>
+                                                  <input type="hidden" name="comment_id" value={{index.0.pk}}>
+                                                </form> <p><strong>Likes:</strong>{{index.1.Likes}} <strong>Dislikes:</strong>{{index.1.Dislikes}}</p></ul>
+                                  
+                                      {% endfor %}
+                                      </ul>
+                                      
+
+                              {% endif %}                          
+                      {% endfor %}
+                      <p>----------------------------------------------------------------------------------------------</p>
+                  </div>
+                      {% endfor %}
+              
+          </div>
+              
+          
+          
           
       </div>
+    </div>
+      
   </div>
+    
+</div>
 {% endblock %}

@@ -61,3 +61,12 @@ class Subscription(models.Model):
 
     def __str__(self):
         return str(self.user) + "- " +str(self.last_logged_in)
+    
+class BlogStats(models.Model):
+    post = models.ForeignKey(Posts, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE) 
+    image_response = models.CharField(default="", blank=True, max_length=10)
+
+    def __str__(self):
+        return str(self.user) + "-" + str(self.post) + "-" + str(self.image_response)
+

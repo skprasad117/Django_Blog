@@ -17,6 +17,7 @@ urlpatterns = [
     path("post_editor", views.post_editor, name="post_editor"),
     path("open_post_editor/<int:post_id>/", views.post_editor, name="post_editor"),
     path("subscribe", views.subscribe, name="subscribe"),
+    path("register_blog_image_reaction", views.register_blog_image_reaction, name="register_blog_image_reaction"),
   
 
     
